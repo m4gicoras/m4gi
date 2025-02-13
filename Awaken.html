@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ko"></html>
+<html lang="ko">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -8,8 +8,28 @@
 </head>
 <body class="bg-gray-100">
   <div class="max-w-xl mx-auto p-6">
-    <h1 class="text-3xl font-bold mb-6 text-center">아이템 각성 시뮬레이터 (무기/정령석)</h1>
+    <h1 class="text-3xl font-bold mb-6 text-center">아이템 각성 시뮬레이터<br></h1>
     <form id="simulationForm" class="bg-white p-6 rounded shadow">
+      <!-- 아이템 종류 선택 -->
+      <div class="mb-4">
+        <label for="itemType" class="block text-gray-700">아이템 종류</label>
+        <select id="itemType" name="itemType" class="mt-1 block w-full border-gray-300 rounded" required>
+          <option value="weapon">무기/정령석</option>
+          <option value="armor">방어구</option>
+        </select>
+      </div>
+      <!-- 방어구일 경우 부위 선택 -->
+      <div id="armorOptions" class="mb-4" style="display: none;">
+        <label for="armorPart" class="block text-gray-700">방어구 부위</label>
+        <select id="armorPart" name="armorPart" class="mt-1 block w-full border-gray-300 rounded">
+          <option value="hat">모자</option>
+          <option value="gloves">장갑</option>
+          <option value="top">상의</option>
+          <option value="bottom">하의</option>
+          <option value="shoes">신발</option>
+        </select>
+      </div>
+      <!-- 각성 단계 -->
       <div class="mb-4">
         <label for="step" class="block text-gray-700">각성 단계 (4 또는 5)</label>
         <select id="step" name="step" class="mt-1 block w-full border-gray-300 rounded" required>
@@ -17,6 +37,7 @@
           <option value="5">5</option>
         </select>
       </div>
+      <!-- 목표 옵션 및 수치 -->
       <div class="mb-4">
         <label for="targetOption" class="block text-gray-700">목표 옵션</label>
         <select id="targetOption" name="targetOption" class="mt-1 block w-full border-gray-300 rounded">
@@ -37,20 +58,252 @@
   </div>
 
   <script>
-
-    const OPTION_LIST = [
-      [586, [5, 25]], [587, [1, 2]], [462, [3, 13]], [461, [3, 13]], [585, [3, 13]],
-      [464, [3, 13]], [594, [250, 1000]], [26, [250, 1000]], [18, [250, 1000]],
-      [455, [250, 1000]], [496, [250, 1000]], [570, [250, 1000]], [566, [250, 1000]],
-      [494, [5, 20]], [567, [2, 5]], [571, [2, 5]], [586, [20, 50]], [587, [1, 5]],
-      [462, [7, 25]], [461, [7, 25]], [585, [7, 25]], [464, [7, 25]], [594, [200, 2000]],
-      [26, [200, 2000]], [18, [200, 2000]], [455, [200, 2000]], [496, [200, 2000]],
-      [570, [200, 2000]], [566, [200, 2000]], [494, [5, 30]], [567, [2, 8]], [571, [2, 8]],
-      [586, [20, 100]], [587, [1, 8]], [462, [7, 40]], [461, [7, 40]], [585, [7, 40]],
-      [464, [7, 40]], [465, [1, 1]], [465, [1, 1]], [465, [1, 1]]
+    /* -------------------------------
+       옵션 리스트 및 옵션명 정의
+       ------------------------------- */
+    // 무기/정령석 옵션
+    const OPTION_LIST_WEAPON = [
+      [465, [1, 1]],
+      [465, [1, 1]],
+      [465, [1, 1]],
+      [594, [100, 500]],
+      [26,  [100, 500]],
+      [18,  [100, 500]],
+      [455, [100, 500]],
+      [496, [100, 500]],
+      [570, [100, 500]],
+      [566, [100, 500]],
+      [494, [1, 10]],
+      [567, [1, 3]],
+      [571, [1, 3]],
+      [586, [5, 25]],
+      [587, [1, 2]],
+      [462, [3, 13]],
+      [461, [3, 13]],
+      [585, [3, 13]],
+      [464, [3, 13]],
+      [594, [250, 1000]],
+      [26,  [250, 1000]],
+      [18,  [250, 1000]],
+      [455, [250, 1000]],
+      [496, [250, 1000]],
+      [570, [250, 1000]],
+      [566, [250, 1000]],
+      [566, [250, 1000]],
+      [494, [5, 20]],
+      [567, [2, 5]],
+      [571, [2, 5]],
+      [586, [20, 50]],
+      [587, [1, 5]],
+      [462, [7, 25]],
+      [461, [7, 25]],
+      [585, [1, 25]],
+      [464, [7, 25]],
+      [594, [200, 2000]],
+      [26,  [200, 2000]],
+      [18,  [200, 2000]],
+      [455, [200, 2000]],
+      [496, [200, 2000]],
+      [570, [200, 2000]],
+      [566, [200, 2000]],
+      [494, [5, 30]],
+      [567, [2, 8]],
+      [571, [2, 8]],
+      [586, [20, 100]],
+      [587, [1, 8]],
+      [462, [7, 40]],
+      [461, [7, 40]],
+      [585, [7, 40]],
+      [464, [7, 40]]
     ];
 
-    const OPTION_NAME = {
+    // 방어구 공통 옵션
+    const OPTION_LIST_ARMOR = [
+      [26, [400, 700]],
+      [594, [400, 700]],
+      [455, [400, 700]],
+      [594, [70, 300]],
+      [26,  [70, 300]],
+      [18,  [70, 300]],
+      [455, [70, 300]],
+      [496, [70, 300]],
+      [570, [70, 300]],
+      [566, [70, 300]],
+      [30,  [300, 1000]],
+      [244, [50, 200]],
+      [144, [50, 200]],
+      [31,  [1, 2]],
+      [594, [150, 600]],
+      [26,  [150, 600]],
+      [18,  [150, 600]],
+      [455, [150, 600]],
+      [496, [150, 600]],
+      [570, [150, 600]],
+      [566, [150, 600]],
+      [30,  [500, 2500]],
+      [244, [100, 400]],
+      [144, [100, 400]],
+      [31,  [2, 4]],
+      [594, [150, 1200]],
+      [26,  [150, 1200]],
+      [18,  [150, 1200]],
+      [455, [150, 1200]],
+      [496, [150, 1200]],
+      [570, [150, 1200]],
+      [566, [150, 1200]],
+      [30,  [500, 5000]],
+      [244, [100, 800]],
+      [144, [100, 800]],
+      [31,  [2, 6]],
+      [86,  [1, 1]]
+    ];
+
+    // 방어구 부위별 추가 옵션
+    const OPTION_LIST_HG = [
+      [1107015, [1, 1]],
+      [1104017, [1, 1]],
+      [1109021, [1, 1]],
+      [1211004, [1, 1]],
+      [1109406, [1, 1]],
+      [1100111, [1, 1]],
+      [2104104, [1, 1]],
+      [1210023, [1, 1]],
+      [1107033, [1, 1]],
+      [1210008, [1, 1]],
+      [1107019, [1, 1]],
+      [1108020, [1, 1]],
+      [1212022, [1, 1]],
+      [1103033, [1, 1]],
+      [1310048, [1, 1]],
+      [1310250, [1, 1]],
+      [1415055, [1, 1]],
+      [1411056, [1, 1]],
+      [1760102, [1, 1]],
+      [1801312, [1, 1]],
+      [1802312, [1, 1]],
+      [1803323, [1, 1]],
+      [1011023, [1, 1]],
+      [1010024, [1, 1]],
+      [1010025, [1, 1]],
+      [2402705, [1, 1]],
+      [1010027, [1, 1]],
+      [1010028, [1, 1]],
+      [1002029, [1, 1]],
+      [1000030, [1, 1]],
+      [2403202, [1, 1]],
+      [2406905, [1, 1]],
+      [1803504, [1, 1]],
+      [1803702, [1, 1]],
+      [1803806, [1, 1]],
+      [1804080, [1, 1]]
+    ];
+
+    const OPTION_LIST_PC = [
+      [1211005, [1, 1]],
+      [1210007, [1, 1]],
+      [1210021, [1, 1]],
+      [1107014, [1, 1]],
+      [1211104, [1, 1]],
+      [1104001, [1, 1]],
+      [2211103, [1, 1]],
+      [3001019, [1, 1]],
+      [1106013, [1, 1]],
+      [1109908, [1, 1]],
+      [1109009, [1, 1]],
+      [1105020, [1, 1]],
+      [1210022, [1, 1]],
+      [1101033, [1, 1]],
+      [1311147, [1, 1]],
+      [1310053, [1, 1]],
+      [1413055, [1, 1]],
+      [1417055, [1, 1]],
+      [1759107, [1, 1]],
+      [1801309, [1, 1]],
+      [1802318, [1, 1]],
+      [1803321, [1, 1]],
+      [1002023, [1, 1]],
+      [1000024, [1, 1]],
+      [2402603, [1, 1]],
+      [2402706, [1, 1]],
+      [1000027, [1, 1]],
+      [1005028, [1, 1]],
+      [2403003, [1, 1]],
+      [2403101, [1, 1]],
+      [1007031, [1, 1]],
+      [2406902, [1, 1]],
+      [1803505, [1, 1]],
+      [1803704, [1, 1]],
+      [1803805, [1, 1]],
+      [1804070, [1, 1]]
+    ];
+
+    const OPTION_LIST_BOOTS = [
+      [3802404, [10, 20]],
+      [3802504, [10, 20]],
+      [3802604, [10, 20]],
+      [3802704, [10, 20]],
+      [3802804, [10, 20]],
+      [3802904, [10, 20]],
+      [3803004, [10, 20]],
+      [3803104, [10, 20]],
+      [3803204, [10, 20]],
+      [3803604, [10, 20]],
+      [3803704, [10, 20]],
+      [3803804, [10, 20]],
+      [3803904, [10, 20]],
+      [3804004, [10, 20]],
+      [3804104, [10, 20]],
+      [3804204, [10, 20]],
+      [3804304, [10, 20]],
+      [3804404, [10, 20]],
+      [3804504, [10, 20]],
+      [3804904, [10, 20]],
+      [3805204, [10, 20]],
+      [3805604, [10, 20]],
+      [3806004, [10, 20]],
+      [3806404, [10, 20]],
+      [3806804, [10, 20]],
+      [3806904, [10, 20]],
+      [3807304, [10, 20]],
+      [3812404, [10, 20]],
+      [3812504, [10, 20]],
+      [3812604, [10, 20]],
+      [3812704, [10, 20]],
+      [3812804, [10, 20]],
+      [3812904, [10, 20]],
+      [3813004, [10, 20]],
+      [3813104, [10, 20]],
+      [3813204, [10, 20]],
+      [3813604, [10, 20]],
+      [3813704, [10, 20]],
+      [3813804, [10, 20]],
+      [3813904, [10, 20]],
+      [3814004, [10, 20]],
+      [3814104, [10, 20]],
+      [3814204, [10, 20]],
+      [3814304, [10, 20]],
+      [3814404, [10, 20]],
+      [3814504, [10, 20]],
+      [3814904, [10, 20]],
+      [3815204, [10, 20]],
+      [3815604, [10, 20]],
+      [3816004, [10, 20]],
+      [3816404, [10, 20]],
+      [3816804, [10, 20]],
+      [3816904, [10, 20]],
+      [3817304, [10, 10]],
+      [3807404, [10, 20]],
+      [3817404, [10, 20]],
+      [3807504, [10, 20]],
+      [3817504, [10, 20]],
+      [3807804, [10, 20]],
+      [3817804, [10, 20]],
+      [3808104, [10, 20]],
+      [3818104, [10, 20]]
+    ];
+
+    // 옵션명 정의
+    const OPTION_NAME_WEAPON = {
       586: "무기 공격력/속성력 +d",
       587: "무기 공격력/속성력 +d%",
       462: "물리/마법 최소대미지 +d%",
@@ -70,17 +323,257 @@
       465: "물리/마법 크리티컬 확률 +d%"
     };
 
-    const targetOptionSelect = document.getElementById("targetOption");
-    for (const key in OPTION_NAME) {
-      const optionElem = document.createElement("option");
-      optionElem.value = OPTION_NAME[key];
-      optionElem.textContent = OPTION_NAME[key];
-      targetOptionSelect.appendChild(optionElem);
+    const OPTION_NAME_ARMOR = {
+      594: "근력/마법력 +d",
+      26: "체력 +d",
+      18: "행운 +d",
+      455: "올스탯 +d",
+      496: "물리/마법 고정 대미지 +d",
+      570: "보스 몬스터 추가 대미지 +d",
+      566: "일반 몬스터 추가 대미지 +d",
+      30: "최대 HP +d",
+      144: "물리 대미지 감소 +d",
+      244: "마법 대미지 감소 +d",
+      31: "최대 HP +d%",
+      86: "대미지 감소 +d%"
+    };
+
+    const OPTION_NAME_HG = {
+      1107015: "표풍일식 Lv. 1",
+      1104017: "질풍 Lv. 1",
+      1109021: "크로스 블레이드 Lv. 1",
+      1211004: "빛의 심판 Lv. 1",
+      1109406: "해머 타이푼 Lv. 1",
+      1100111: "환영각 Lv. 1",
+      2104104: "아이스 플랭크 Lv. 1",
+      1210023: "악성의 멜로디 Lv. 1",
+      1107033: "펜 오브 나이프 Lv. 1",
+      1210008: "애로우 트랩 Lv. 1",
+      1107019: "바밍크라이 Lv. 1",
+      1108020: "디스트로이 홀 Lv. 1",
+      1212022: "아슈캐논 Lv. 1",
+      1103033: "소울 마스터 III Lv. 1",
+      1310048: "리플렉션 Lv. 1",
+      1310250: "[♠] 어퍼컷 Lv. 1",
+      1415055: "광기의 그림자 Lv. 1",
+      1411056: "그림자 칼날 Lv. 1",
+      1760102: "마타르 Lv. 1",
+      1801312: "인페르노 Lv. 1",
+      1802312: "트리플 립 Lv. 1",
+      1803323: "다크 스피릿 Lv. 1",
+      1011023: "스파이럴 서먼 Lv. 1",
+      1010024: "화령검무 Lv. 1",
+      1010025: "디스페어 Lv. 1",
+      2402705: "[아웃파이터] 기공 Lv. 1",
+      1010027: "사신의 기운 Lv. 1",
+      1010028: "비르투오소 Lv. 1",
+      1002029: "인법_무(誣) Lv. 1",
+      1000030: "스나이핑 Lv. 1",
+      2403202: "DS-MT Lv. 1",
+      2406905: "매직 스퀘어 [퍼플] Lv. 1",
+      1803504: "휠윈드 Lv. 1",
+      1803702: "마엘스트롬 Lv. 1",
+      1803806: "터닝 샤웃 Lv. 1",
+      1804080: "발도 · 귀신사냥 Lv. 1"
+    };
+
+    const OPTION_NAME_PC = {
+      1211005: "천파협란 Lv. 1",
+      1210007: "파워스파이크 Lv. 1",
+      1210021: "소울 블레이드 Lv. 1",
+      1107014: "래퍼드해쉬 Lv. 1",
+      1211104: "파워 밤 Lv. 1",
+      1104001: "호열각 Lv. 1",
+      2211103: "화염지옥 Lv. 1",
+      3001019: "악마의 소리 Lv. 1",
+      1106013: "만천화우 Lv. 1",
+      1109908: "애로우 붐 Lv. 1",
+      1109009: "프레임 샤웃 Lv. 1",
+      1105020: "개틀링 Lv. 1",
+      1210022: "라이즈 빔 Lv. 1",
+      1101033: "소울 마스터 I Lv. 1",
+      1311147: "프리덤 라이트 Lv. 1",
+      1310053: "[♣] 다크니스 덱 Lv. 1",
+      1413055: "경직의 그림자 Lv. 1",
+      1417055: "그림자 춤 Lv. 1",
+      1759107: "글로리아 Lv. 1",
+      1801309: "마그마 스피어 Lv. 1",
+      1802318: "트리플 컷 Lv. 1",
+      1803321: "다크 피어스 Lv. 1",
+      1002023: "스파이럴 프레스 Lv. 1",
+      1000024: "멸천비검술 Lv. 1",
+      2402603: "스트라이크 Lv. 1",
+      2402706: "[인파이터] 원투 Lv. 1",
+      1000027: "데빌사이드 [어택] Lv. 1",
+      1005028: "크레센도 Lv. 1",
+      2403003: "인법_환(幻) Lv. 1",
+      2403101: "트위스터 Lv. 1",
+      1007031: "DM-GR Lv. 1",
+      2406902: "가넷 [레드] Lv. 1",
+      1803505: "윈드 스톰 : 릴리즈 Lv. 1",
+      1803704: "워터 봄 Lv. 1",
+      1803805: "트위스트 링 Lv. 1",
+      1804070: "발도 · 물결베기 Lv. 1"
+    };
+
+    const OPTION_NAME_BOOTS = {
+      3802404: "하이랜더【코어】 Lv. +d",
+      3802504: "소드댄서【코어】 Lv. +d",
+      3802604: "테러나이트【코어】 Lv. +d",
+      3802704: "사이키커【코어】 Lv. +d",
+      3802804: "팬텀메이지【코어】 Lv. +d",
+      3802904: "마에스트로【코어】 Lv. +d",
+      3803004: "로그마스터【코어】 Lv. +d",
+      3803104: "저지먼트【코어】 Lv. +d",
+      3803204: "스타시커【코어】 Lv. +d",
+      3803604: "히어로【코어】 Lv. +d",
+      3803704: "검호【코어】 Lv. +d",
+      3803804: "세이버【코어】 Lv. +d",
+      3803904: "세피로트【코어】 Lv. +d",
+      3804004: "아크메이지【코어】 Lv. +d",
+      3804104: "파픈스타【코어】 Lv. +d",
+      3804204: "윈드스토커【코어】 Lv. +d",
+      3804304: "프라이쉬츠【코어】 Lv. +d",
+      3804404: "소디언【코어】 Lv. +d",
+      3804504: "소울리스원【코어】 Lv. +d",
+      3804904: "아크마스터【코어】 Lv. +d",
+      3805204: "포스마스터【코어】 Lv. +d",
+      3805604: "흑영【코어】 Lv. +d",
+      3806004: "데미갓【코어】 Lv. +d",
+      3806404: "아그니【코어】 Lv. +d",
+      3806804: "다크체이서【코어】 Lv. +d",
+      3806904: "쥬얼스타【코어】 Lv. +d",
+      3807304: "섀도우워커【코어】 Lv. +d",
+      3812404: "하이랜더【코어 II】 Lv. +d",
+      3812504: "소드댄서【코어 II】 Lv. +d",
+      3812604: "테러나이트【코어 II】 Lv. +d",
+      3812704: "사이키커【코어 II】 Lv. +d",
+      3812804: "팬텀메이지【코어 II】 Lv. +d",
+      3812904: "마에스트로【코어 II】 Lv. +d",
+      3813004: "로그마스터【코어 II】 Lv. +d",
+      3813104: "저지먼트【코어 II】 Lv. +d",
+      3813204: "스타시커【코어 II】 Lv. +d",
+      3813604: "히어로【코어 II】 Lv. +d",
+      3813704: "검호【코어 II】 Lv. +d",
+      3813804: "세이버【코어 II】 Lv. +d",
+      3813904: "세피로트【코어 II】 Lv. +d",
+      3814004: "아크메이지【코어 II】 Lv. +d",
+      3814104: "파픈스타【코어 II】 Lv. +d",
+      3814204: "윈드스토커【코어 II】 Lv. +d",
+      3814304: "프라이쉬츠【코어 II】 Lv. +d",
+      3814404: "소디언【코어 II】 Lv. +d",
+      3814504: "소울리스원【코어 II】 Lv. +d",
+      3814904: "아크마스터【코어 II】 Lv. +d",
+      3815204: "포스마스터【코어 II】 Lv. +d",
+      3815604: "흑영【코어 II】 Lv. +d",
+      3816004: "데미갓【코어 II】 Lv. +d",
+      3816404: "아그니【코어 II】 Lv. +d",
+      3816804: "다크체이서【코어 II】 Lv. +d",
+      3816904: "쥬얼스타【코어 II】 Lv. +d",
+      3817304: "섀도우워커【코어 II】 Lv. +d",
+      3807404: "윈디아【코어】 Lv. +d",
+      3817404: "윈디아【코어 II】 Lv. +d",
+      3807504: "레이니아【코어】 Lv. +d",
+      3817504: "레이니아【코어 II】 Lv. +d",
+      3807804: "게이트키퍼【코어】 Lv. +d",
+      3817804: "게이트키퍼【코어 II】 Lv. +d",
+      3808104: "검성【코어】 Lv. +d",
+      3818104: "검성【코어 II】 Lv. +d"
+    };
+
+    /* -------------------------------------------------------
+       타겟 옵션 셀렉트 업데이트 함수
+       각 option에 data-code 속성에 옵션 코드를 문자열로 저장
+       ------------------------------------------------------- */
+    function updateTargetOptions() {
+      const targetOptionSelect = document.getElementById("targetOption");
+      targetOptionSelect.innerHTML = `<option value="">없음</option>`;
+      const itemType = document.getElementById("itemType").value;
+      let names = {};
+      if (itemType === "weapon") {
+        names = OPTION_NAME_WEAPON;
+      } else if (itemType === "armor") {
+        const armorPart = document.getElementById("armorPart").value;
+        let additionalNames = {};
+        if (armorPart === "hat" || armorPart === "gloves") {
+          additionalNames = OPTION_NAME_HG;
+        } else if (armorPart === "top" || armorPart === "bottom") {
+          additionalNames = OPTION_NAME_PC;
+        } else if (armorPart === "shoes") {
+          additionalNames = OPTION_NAME_BOOTS;
+        }
+        names = Object.assign({}, OPTION_NAME_ARMOR, additionalNames);
+      }
+      for (const key in names) {
+        const optionElem = document.createElement("option");
+        optionElem.value = names[key];
+        optionElem.textContent = names[key];
+        // data-code에 옵션 코드를 문자열로 저장
+        optionElem.dataset.code = key.toString();
+        targetOptionSelect.appendChild(optionElem);
+      }
+      updateTargetValueInput(); // 옵션 갱신 후 목표 수치 입력창 업데이트
     }
 
+    /* -------------------------------------------------------
+       목표 옵션 변경 시 목표 수치 입력창 활성/비활성 처리
+       (방어구 부위가 신발이 아닐 때, 선택된 옵션의 data-code 길이가 7자리이면
+        입력창은 비활성화하고, 값과 placeholder를 "1 (자동 적용)"으로 설정)
+       ------------------------------------------------------- */
+    function updateTargetValueInput() {
+      const targetValueInput = document.getElementById("targetValue");
+      const itemType = document.getElementById("itemType").value;
+      if (itemType !== "armor") {
+        targetValueInput.disabled = false;
+        targetValueInput.placeholder = "예: 50";
+        return;
+      }
+      const armorPart = document.getElementById("armorPart").value;
+      // 신발 부위는 항상 활성화
+      if (armorPart === "shoes") {
+        targetValueInput.disabled = false;
+        targetValueInput.placeholder = "예: 50";
+        return;
+      }
+      const targetOptionSelect = document.getElementById("targetOption");
+      const selectedOption = targetOptionSelect.options[targetOptionSelect.selectedIndex];
+      if (selectedOption && selectedOption.dataset.code && selectedOption.dataset.code.length === 7) {
+        targetValueInput.disabled = true;
+        targetValueInput.value = "";
+        targetValueInput.placeholder = "";
+      } else {
+        targetValueInput.disabled = false;
+        targetValueInput.placeholder = "예: 50";
+      }
+    }
+
+    /* -----------------------------
+       아이템 종류 및 부위 변경 이벤트
+       ----------------------------- */
+    document.getElementById("itemType").addEventListener("change", function() {
+      const armorOptionsDiv = document.getElementById("armorOptions");
+      if (this.value === "armor") {
+        armorOptionsDiv.style.display = "block";
+      } else {
+        armorOptionsDiv.style.display = "none";
+      }
+      updateTargetOptions();
+    });
+    document.getElementById("armorPart").addEventListener("change", updateTargetOptions);
+    document.getElementById("targetOption").addEventListener("change", updateTargetValueInput);
+
+    // 초기 타겟 옵션 업데이트 (기본은 무기)
+    updateTargetOptions();
+
+    /* -----------------------------
+       공통: 랜덤 정수 함수
+       ----------------------------- */
     const randInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
 
-    function simulateAwakening(step, targetOption, targetValue) {
+    /* -----------------------------
+       시뮬레이션 함수
+       ----------------------------- */
+    function simulateAwakening(itemType, armorPart, step, targetOption, targetValue) {
       let sectionProbabilities, costPerAttempt;
       if (step === 4) {
         sectionProbabilities = [100, 95, 45, 25];
@@ -92,16 +585,48 @@
         return { error: "올바른 각성 단계를 선택해주세요. (4 또는 5)" };
       }
 
+      let optionList, optionNames;
+      if (itemType === "weapon") {
+        optionList = OPTION_LIST_WEAPON;
+        optionNames = OPTION_NAME_WEAPON;
+      } else if (itemType === "armor") {
+        let additionalOptionList = [];
+        let additionalOptionNames = {};
+        if (armorPart === "hat" || armorPart === "gloves") {
+          additionalOptionList = OPTION_LIST_HG;
+          additionalOptionNames = OPTION_NAME_HG;
+        } else if (armorPart === "top" || armorPart === "bottom") {
+          additionalOptionList = OPTION_LIST_PC;
+          additionalOptionNames = OPTION_NAME_PC;
+        } else if (armorPart === "shoes") {
+          additionalOptionList = OPTION_LIST_BOOTS;
+          additionalOptionNames = OPTION_NAME_BOOTS;
+        }
+        optionList = OPTION_LIST_ARMOR.concat(additionalOptionList);
+        optionNames = Object.assign({}, OPTION_NAME_ARMOR, additionalOptionNames);
+      }
+
+      // 목표 옵션이 없는 경우 (일반 각성)
       if (!targetOption || !targetValue) {
         const appliedOptions = [];
-        sectionProbabilities.forEach(prob => {
+        const skillOption = new Set();
+        for (let i = 0; i < sectionProbabilities.length; i++) {
+          const prob = sectionProbabilities[i];
           if (randInt(1, 100) <= prob) {
-            const [optionId, range] = OPTION_LIST[randInt(0, OPTION_LIST.length - 1)];
+            const [optionId, range] = optionList[randInt(0, optionList.length - 1)];
+            // 옵션 코드가 7자리이면 중복 체크
+            if (optionId.toString().length === 7) {
+              if (skillOption.has(optionId.toString())) {
+                continue;
+              } else {
+                skillOption.add(optionId.toString());
+              }
+            }
             const optionValue = randInt(range[0], range[1]);
-            const optionText = OPTION_NAME[optionId].replace("d", optionValue);
+            const optionText = optionNames[optionId].replace("d", optionValue);
             appliedOptions.push(optionText);
           }
-        });
+        }
         return {
           step,
           cost: costPerAttempt,
@@ -109,34 +634,38 @@
           isTargetSim: false
         };
       } else {
-
+        // 목표 옵션 수치 달성을 위한 시뮬레이션
         let totalCost = 0, attempts = 0, success = false, accumulatedValue = 0;
         let appliedOptions = [];
-
         let targetOptionId = null;
-        for (const key in OPTION_NAME) {
-          if (OPTION_NAME[key] === targetOption) {
+        for (const key in optionNames) {
+          if (optionNames[key] === targetOption) {
             targetOptionId = parseInt(key);
             break;
           }
         }
         if (targetOptionId === null) {
-          return { error: `입력한 목표 옵션 '${targetOption}'을 찾을 수 없습니다.` };
+          return { error: `입력한 목표 옵션 '${targetOption}'을 찾지 못했습니다.` };
         }
-
         while (!success) {
           attempts++;
           totalCost += costPerAttempt;
           appliedOptions = [];
           accumulatedValue = 0;
-
+          const skillOption = new Set();
           for (const prob of sectionProbabilities) {
             if (randInt(1, 100) <= prob) {
-              const [optionId, range] = OPTION_LIST[randInt(0, OPTION_LIST.length - 1)];
+              const [optionId, range] = optionList[randInt(0, optionList.length - 1)];
+              if (optionId.toString().length === 7) {
+                if (skillOption.has(optionId.toString())) {
+                  continue;
+                } else {
+                  skillOption.add(optionId.toString());
+                }
+              }
               const optionValue = randInt(range[0], range[1]);
-              const optionText = OPTION_NAME[optionId].replace("d", optionValue);
+              const optionText = optionNames[optionId].replace("d", optionValue);
               appliedOptions.push(optionText);
-
               if (optionId === targetOptionId) {
                 accumulatedValue += optionValue;
               }
@@ -164,17 +693,31 @@
       }
     }
 
+    /* -----------------------------
+       폼 제출 이벤트 처리
+       ----------------------------- */
     document.getElementById("simulationForm").addEventListener("submit", function(event) {
       event.preventDefault();
+      const itemType = document.getElementById("itemType").value;
+      let armorPart = null;
+      if (itemType === "armor") {
+        armorPart = document.getElementById("armorPart").value;
+      }
       const step = parseInt(document.getElementById("step").value);
       const targetOption = document.getElementById("targetOption").value;
-      const targetValueInput = document.getElementById("targetValue").value;
-      const targetValue = targetValueInput ? parseInt(targetValueInput) : null;
-
-      const result = simulateAwakening(step, targetOption, targetValue);
+      const targetValueInput = document.getElementById("targetValue");
+      let targetValue = targetValueInput.value ? parseInt(targetValueInput.value) : null;
+      // 만약 입력창이 비활성화되어 있다면 targetValue는 1로 처리
+      if (targetValueInput.disabled) {
+        targetValue = 1;
+      }
+      const result = simulateAwakening(itemType, armorPart, step, targetOption, targetValue);
       displayResult(result);
     });
 
+    /* -----------------------------
+       결과 출력 함수
+       ----------------------------- */
     function displayResult(result) {
       const container = document.getElementById("resultContainer");
       container.innerHTML = "";
