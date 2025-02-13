@@ -42,10 +42,8 @@
         <label for="targetOption" class="block text-gray-700">목표 옵션</label>
         <select id="targetOption" name="targetOption" class="mt-1 block w-full border-gray-300 rounded">
           <option value="">없음</option>
-          <!-- 옵션 리스트는 기존대로 채워짐 -->
         </select>
       </div>
-      <!-- 변환 시뮬레이션 모드일 경우 나타나는 텍스트 필드 -->
       <div class="mb-4" id="targetOptionTextContainer" style="display: none;">
         <label for="targetOptionText" class="block text-gray-700">무기/속성력 % -> 크리티컬 데미지 %</label>
         <input type="number" id="targetOptionText" name="targetOptionText" class="mt-1 block w-full border-gray-300 rounded" placeholder="예: 4">
@@ -59,7 +57,7 @@
           <input type="checkbox" id="conversionMode" class="form-checkbox">
           <span class="ml-2">변환 시뮬레이션 모드 (기존 목표 옵션 사용 안함)</span>
         </label>
-        <p class="text-sm text-gray-500">※ 무기/정령석일 경우, 옵션 중 물리/마법 최소/최대 대미지(0.5배 변환)와 최소/최대 대미지(1배 변환)를 변환하여 크리티컬 대미지로 계산합니다.</p>
+        <p class="text-sm text-gray-500">※ 무기/정령석일 경우, 옵션 중 물리/마법 최소,최대 대미지(0.5배 변환)와 최소/최대 대미지(1배 변환)를 변환하여 크리티컬 대미지로 계산합니다.</p>
       </div>
       <div class="text-center">
         <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
@@ -619,13 +617,11 @@
         optionNames = Object.assign({}, OPTION_NAME_ARMOR, additionalOptionNames);
       }
 
-      // 변환 시뮬레이션 모드: 무기/정령석이고 conversionMode 체크시
-// 변환 시뮬레이션 모드: 무기/정령석이고 conversionMode 체크시
+
 if (itemType === "weapon" && document.getElementById("conversionMode").checked) {
-  // 1) 사용자가 입력한 "무기/속성력 % -> 크리티컬 데미지 %" 변환 배율 (예: 7)
+
   let conversionFactor = Number(document.getElementById("targetOptionText").value);
 
-  // 2) 목표 옵션 수치 (예: 50) - 누적 변환 크리티컬 데미지가 이 값 이상이면 성공
   let targetThreshold = Number(document.getElementById("targetValue").value);
 
   let totalCost = 0, attempts = 0, conversionTotal = 0;
@@ -661,13 +657,13 @@ if (itemType === "weapon" && document.getElementById("conversionMode").checked) 
         // 2) 물리/마법 최소대미지(462), 최대대미지(461) → 1%당 0.5%
         // 3) 최소/최대 대미지(585) → 1%당 1.0%
         if (optionId === 587) {
-          // 예: optionValue=5, conversionFactor=7 → 5×7=35
+          
           conversionTotal += optionValue * conversionFactor;
         } else if (optionId === 462 || optionId === 461) {
-          // 물리/마법 최소·최대대미지는 1%→0.5%
+          // 물리/마법 최소·최대대미지는 1% → 0.5%
           conversionTotal += optionValue * 0.5;
         } else if (optionId === 585) {
-          // 최소/최대 대미지는 1%→1.0%
+          // 최소/최대 대미지는 1% → 1.0%
           conversionTotal += optionValue * 1.0;
         }
       } else {
@@ -682,8 +678,8 @@ if (itemType === "weapon" && document.getElementById("conversionMode").checked) 
 
   return {
     step,
-    conversionFactor,         // 예) 7
-    targetThreshold,          // 예) 50
+    conversionFactor,         
+    targetThreshold,          
     attempts,
     totalCost,
     // 최종 누적값(소수점 없음)
@@ -817,11 +813,40 @@ if (itemType === "weapon" && document.getElementById("conversionMode").checked) 
     });
 
     function formatCost(value) {
+  // 1조 이상
       if (value >= 1_000_000_000_000) {
-        return `${(value / 1_000_000_000_000).toFixed(1)}조 (${value.toLocaleString()} Ely)`;
-      } else if (value >= 100_000_000) {
-        return `${(value / 100_000_000).toFixed(0)}억 (${value.toLocaleString()} Ely)`;
-      } else {
+        const jo = Math.floor(value / 1_000_000_000_000);       // 조 단위
+        const remain1 = value % 1_000_000_000_000;
+        const eok = Math.floor(remain1 / 100_000_000);         // 억 단위
+        if (eok > 0) {
+          return `${jo}조 ${eok}억 (${value.toLocaleString()} Ely)`;
+        } else {
+          return `${jo}조 (${value.toLocaleString()} Ely)`;
+        }
+      } 
+      // 1억 이상
+      else if (value >= 100_000_000) {
+        const eok = Math.floor(value / 100_000_000);           // 억 단위
+        const remain2 = value % 100_000_000;
+        const man = Math.floor(remain2 / 10_000);              // 만 단위
+        if (man > 0) {
+          return `${eok}억 ${man}만 (${value.toLocaleString()} Ely)`;
+        } else {
+          return `${eok}억 (${value.toLocaleString()} Ely)`;
+        }
+      } 
+      // 1만 이상
+      else if (value >= 10_000) {
+        const man = Math.floor(value / 10_000);                // 만 단위
+        const remain3 = value % 10_000;
+        if (remain3 > 0) {
+          return `${man}만 ${remain3} (${value.toLocaleString()} Ely)`;
+        } else {
+          return `${man}만 (${value.toLocaleString()} Ely)`;
+        }
+      } 
+      // 그 외
+      else {
         return `${value.toLocaleString()} Ely`;
       }
     }
@@ -841,7 +866,7 @@ if (itemType === "weapon" && document.getElementById("conversionMode").checked) 
         html += `<p class="mb-2"><strong>시도 횟수:</strong> ${result.attempts}회</p>`;
         html += `<p class="mb-2"><strong>총 소모 비용:</strong> ${formatCost(result.totalCost)}</p>`;
         html += `<p class="mb-2"><strong>목표 크리티컬 데미지 변환 값:</strong> ${result.targetThreshold}%</p>`;
-        html += `<p class="mb-2"><strong>최종 변환된 크리티컬 대미지:</strong> ${result.conversionTotal}%</p>`;
+        html += `<p class="mb-2"><strong>최종 변환된 크리티컬 데미지:</strong> ${result.conversionTotal}%</p>`;
       } else if (result.isTargetSim) {
         html += `<p class="mb-2"><strong>목표 옵션:</strong> ${result.targetOption.replace("d", result.targetValue)}</p>`;
         html += `<p class="mb-2"><strong>시도 횟수:</strong> ${cumulativeAttempts}회</p>`;
