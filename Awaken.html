@@ -38,15 +38,28 @@
         </select>
       </div>
       <!-- 목표 옵션 및 수치 -->
-      <div class="mb-4">
+      <div class="mb-4" id="targetOptionContainer">
         <label for="targetOption" class="block text-gray-700">목표 옵션</label>
         <select id="targetOption" name="targetOption" class="mt-1 block w-full border-gray-300 rounded">
           <option value="">없음</option>
+          <!-- 옵션 리스트는 기존대로 채워짐 -->
         </select>
+      </div>
+      <!-- 변환 시뮬레이션 모드일 경우 나타나는 텍스트 필드 -->
+      <div class="mb-4" id="targetOptionTextContainer" style="display: none;">
+        <label for="targetOptionText" class="block text-gray-700">무기/속성력 % -> 크리티컬 데미지 %</label>
+        <input type="number" id="targetOptionText" name="targetOptionText" class="mt-1 block w-full border-gray-300 rounded" placeholder="예: 4">
       </div>
       <div class="mb-4">
         <label for="targetValue" class="block text-gray-700">목표 옵션 수치</label>
         <input type="number" id="targetValue" name="targetValue" class="mt-1 block w-full border-gray-300 rounded" placeholder="예: 50">
+      </div>
+      <div id="conversionModeDiv" class="mb-4" style="display: none;">
+        <label class="inline-flex items-center">
+          <input type="checkbox" id="conversionMode" class="form-checkbox">
+          <span class="ml-2">변환 시뮬레이션 모드 (기존 목표 옵션 사용 안함)</span>
+        </label>
+        <p class="text-sm text-gray-500">※ 무기/정령석일 경우, 옵션 중 물리/마법 최소/최대 대미지(0.5배 변환)와 최소/최대 대미지(1배 변환)를 변환하여 크리티컬 대미지로 계산합니다.</p>
       </div>
       <div class="text-center">
         <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
@@ -508,11 +521,10 @@
         const optionElem = document.createElement("option");
         optionElem.value = names[key];
         optionElem.textContent = names[key];
-        // data-code에 옵션 코드를 문자열로 저장
         optionElem.dataset.code = key.toString();
         targetOptionSelect.appendChild(optionElem);
       }
-      updateTargetValueInput(); // 옵션 갱신 후 목표 수치 입력창 업데이트
+      updateTargetValueInput();
     }
 
     function updateTargetValueInput() {
@@ -524,7 +536,6 @@
         return;
       }
       const armorPart = document.getElementById("armorPart").value;
-      // 신발 부위는 항상 활성화
       if (armorPart === "shoes") {
         targetValueInput.disabled = false;
         targetValueInput.placeholder = "예: 50";
@@ -542,22 +553,36 @@
       }
     }
 
-    /* -----------------------------
-       아이템 종류 및 부위 변경 이벤트
-       ----------------------------- */
+    // 아이템 종류 변경 시, 방어구/변환 모드 보이기 및 목표 옵션 업데이트
     document.getElementById("itemType").addEventListener("change", function() {
       const armorOptionsDiv = document.getElementById("armorOptions");
+      const conversionModeDiv = document.getElementById("conversionModeDiv");
       if (this.value === "armor") {
         armorOptionsDiv.style.display = "block";
+        conversionModeDiv.style.display = "none";
       } else {
         armorOptionsDiv.style.display = "none";
+        conversionModeDiv.style.display = "block";
       }
       updateTargetOptions();
     });
-    document.getElementById("armorPart").addEventListener("change", updateTargetOptions);
-    document.getElementById("targetOption").addEventListener("change", updateTargetValueInput);
 
-    updateTargetOptions();
+    // 변환 모드 체크 시 목표 입력 레이블 변경
+    document.getElementById("conversionMode").addEventListener("change", function() {
+      const targetLabel = document.querySelector('label[for="targetOption"]');
+      const targetOptionContainer = document.getElementById("targetOptionContainer");
+      const targetOptionTextContainer = document.getElementById("targetOptionTextContainer");
+  
+      if (this.checked) {
+        targetLabel.textContent = "무기/속성력 % -> 크리티컬 데미지 %";
+        targetOptionContainer.style.display = "none";
+        targetOptionTextContainer.style.display = "block";
+      } else {
+        targetLabel.textContent = "목표 옵션";
+        targetOptionContainer.style.display = "block";
+        targetOptionTextContainer.style.display = "none";
+      }
+    });
 
     const randInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
 
@@ -594,7 +619,81 @@
         optionNames = Object.assign({}, OPTION_NAME_ARMOR, additionalOptionNames);
       }
 
-      // 목표 옵션이 "없음"인 경우 (targetOption 값이 비어있을 때)
+      // 변환 시뮬레이션 모드: 무기/정령석이고 conversionMode 체크시
+// 변환 시뮬레이션 모드: 무기/정령석이고 conversionMode 체크시
+if (itemType === "weapon" && document.getElementById("conversionMode").checked) {
+  // 1) 사용자가 입력한 "무기/속성력 % -> 크리티컬 데미지 %" 변환 배율 (예: 7)
+  let conversionFactor = Number(document.getElementById("targetOptionText").value);
+
+  // 2) 목표 옵션 수치 (예: 50) - 누적 변환 크리티컬 데미지가 이 값 이상이면 성공
+  let targetThreshold = Number(document.getElementById("targetValue").value);
+
+  let totalCost = 0, attempts = 0, conversionTotal = 0;
+  let appliedOptions = [];
+
+  // 목표치에 도달할 때까지 시도
+  while (conversionTotal < targetThreshold) {
+    attempts++;
+    totalCost += costPerAttempt;
+    conversionTotal = 0;  // 매 시도마다 변환 누적값 초기화
+    appliedOptions = [];
+    const skillOption = new Set();
+
+    // 각 섹션별로 옵션 부여
+    for (const prob of sectionProbabilities) {
+      if (randInt(1, 100) <= prob) {
+        // 랜덤으로 옵션 선택
+        const [optionId, range] = optionList[randInt(0, optionList.length - 1)];
+        // 스킬 옵션(7자리) 중복 방지
+        if (optionId.toString().length === 7) {
+          if (skillOption.has(optionId.toString())) continue;
+          else skillOption.add(optionId.toString());
+        }
+
+        const optionValue = randInt(range[0], range[1]);
+        const optionText = optionNames[optionId].replace("d", optionValue);
+        appliedOptions.push(optionText);
+
+        // ─────────────────────────────
+        //   변환 규칙 적용 구간
+        // ─────────────────────────────
+        // 1) 무기/속성력 +d% (옵션 코드 587) → (optionValue × conversionFactor)
+        // 2) 물리/마법 최소대미지(462), 최대대미지(461) → 1%당 0.5%
+        // 3) 최소/최대 대미지(585) → 1%당 1.0%
+        if (optionId === 587) {
+          // 예: optionValue=5, conversionFactor=7 → 5×7=35
+          conversionTotal += optionValue * conversionFactor;
+        } else if (optionId === 462 || optionId === 461) {
+          // 물리/마법 최소·최대대미지는 1%→0.5%
+          conversionTotal += optionValue * 0.5;
+        } else if (optionId === 585) {
+          // 최소/최대 대미지는 1%→1.0%
+          conversionTotal += optionValue * 1.0;
+        }
+      } else {
+        break;
+      }
+    }
+
+    if (attempts > 20000) {
+      return { error: "20,000번 시도해도 목표 변환 옵션을 달성하지 못했습니다. 다시 시도해주세요." };
+    }
+  }
+
+  return {
+    step,
+    conversionFactor,         // 예) 7
+    targetThreshold,          // 예) 50
+    attempts,
+    totalCost,
+    // 최종 누적값(소수점 없음)
+    conversionTotal: conversionTotal.toFixed(0),
+    appliedOptions,
+    isConversionSim: true
+  };
+}
+
+      // 기존 일반 시뮬레이션
       if (!targetOption || !targetValue) {
         const appliedOptions = [];
         const skillOption = new Set();
@@ -602,13 +701,9 @@
           const prob = sectionProbabilities[i];
           if (randInt(1, 100) <= prob) {
             const [optionId, range] = optionList[randInt(0, optionList.length - 1)];
-            // 옵션 코드가 7자리이면 중복 체크
             if (optionId.toString().length === 7) {
-              if (skillOption.has(optionId.toString())) {
-                continue;
-              } else {
-                skillOption.add(optionId.toString());
-              }
+              if (skillOption.has(optionId.toString())) continue;
+              else skillOption.add(optionId.toString());
             }
             const optionValue = randInt(range[0], range[1]);
             const optionText = optionNames[optionId].replace("d", optionValue);
@@ -623,7 +718,7 @@
           isTargetSim: false
         };
       } else {
-        // 목표 옵션 수치 달성을 위한 시뮬레이션
+        // 목표 옵션 수치 달성을 위한 일반 시뮬레이션
         let totalCost = 0, attempts = 0, success = false, accumulatedValue = 0;
         let appliedOptions = [];
         let targetOptionId = null;
@@ -646,11 +741,8 @@
             if (randInt(1, 100) <= prob) {
               const [optionId, range] = optionList[randInt(0, optionList.length - 1)];
               if (optionId.toString().length === 7) {
-                if (skillOption.has(optionId.toString())) {
-                  continue;
-                } else {
-                  skillOption.add(optionId.toString());
-                }
+                if (skillOption.has(optionId.toString())) continue;
+                else skillOption.add(optionId.toString());
               }
               const optionValue = randInt(range[0], range[1]);
               const optionText = optionNames[optionId].replace("d", optionValue);
@@ -698,7 +790,7 @@
       }
       const result = simulateAwakening(itemType, armorPart, step, targetOption, targetValue);
       
-      // 목표 옵션이 "없음"인 경우 누적, 그렇지 않으면 새로 계산(리셋)
+      // 누적값 업데이트
       if (targetOption === "") {
         if (!result.error) {
           if (result.isTargetSim) {
@@ -710,7 +802,6 @@
           }
         }
       } else {
-        // 목표 옵션 선택 시 누적값은 해당 시뮬레이션 결과로 새로 설정
         if (!result.error) {
           if (result.isTargetSim) {
             cumulativeAttempts = result.attempts;
@@ -723,20 +814,17 @@
       }
       
       displayResult(result);
-});
+    });
 
-function formatCost(value) {
-  if (value >= 1_000_000_000_000) {
-    // 조 단위: 소수점 한 자리까지 표시 (예: 1.5조)
-    return `${(value / 1_000_000_000_000).toFixed(1)}조 (${value.toLocaleString()} Ely)`;
-  } else if (value >= 100_000_000) {
-    // 억 단위: 1억 단위는 정수로 표시 (예: 100억)
-    return `${(value / 100_000_000).toFixed(0)}억 (${value.toLocaleString()} Ely)`;
-  } else {
-    return `${value.toLocaleString()} Ely`;
-  }
-}
-
+    function formatCost(value) {
+      if (value >= 1_000_000_000_000) {
+        return `${(value / 1_000_000_000_000).toFixed(1)}조 (${value.toLocaleString()} Ely)`;
+      } else if (value >= 100_000_000) {
+        return `${(value / 100_000_000).toFixed(0)}억 (${value.toLocaleString()} Ely)`;
+      } else {
+        return `${value.toLocaleString()} Ely`;
+      }
+    }
 
     function displayResult(result) {
       const container = document.getElementById("resultContainer");
@@ -748,7 +836,13 @@ function formatCost(value) {
       let html = `<div class="bg-white p-6 rounded shadow">`;
       html += `<p class="mb-2"><strong>각성 단계:</strong> ${result.step}</p>`;
       
-      if (result.isTargetSim) {
+      if (result.isConversionSim) {
+        html += `<p class="mb-2"><strong>무기/속성력 % -> 크리티컬 데미지 % 변환 수치:</strong> ${result.conversionFactor}</p>`;
+        html += `<p class="mb-2"><strong>시도 횟수:</strong> ${result.attempts}회</p>`;
+        html += `<p class="mb-2"><strong>총 소모 비용:</strong> ${formatCost(result.totalCost)}</p>`;
+        html += `<p class="mb-2"><strong>목표 크리티컬 데미지 변환 값:</strong> ${result.targetThreshold}%</p>`;
+        html += `<p class="mb-2"><strong>최종 변환된 크리티컬 대미지:</strong> ${result.conversionTotal}%</p>`;
+      } else if (result.isTargetSim) {
         html += `<p class="mb-2"><strong>목표 옵션:</strong> ${result.targetOption.replace("d", result.targetValue)}</p>`;
         html += `<p class="mb-2"><strong>시도 횟수:</strong> ${cumulativeAttempts}회</p>`;
         html += `<p class="mb-2"><strong>총 소모 비용:</strong> ${formatCost(cumulativeCost)}</p>`;
@@ -771,13 +865,19 @@ function formatCost(value) {
       container.innerHTML = html;
     }
 
-       document.getElementById("resetBtn").addEventListener("click", function() {
-        document.getElementById("simulationForm").reset();
-        updateTargetOptions();
-        document.getElementById("resultContainer").innerHTML = "";
-        cumulativeAttempts = 0;
-        cumulativeCost = 0;
-});
+    document.getElementById("resetBtn").addEventListener("click", function() {
+      document.getElementById("simulationForm").reset();
+      updateTargetOptions();
+      document.getElementById("resultContainer").innerHTML = "";
+      cumulativeAttempts = 0;
+      cumulativeCost = 0;
+    });
+
+    // 페이지 로드 시 강제 change 이벤트 발생하여 초기 상태 업데이트
+    window.addEventListener("load", function() {
+      const itemType = document.getElementById("itemType");
+      itemType.dispatchEvent(new Event("change"));
+    });
   </script>
 </body>
 </html>
