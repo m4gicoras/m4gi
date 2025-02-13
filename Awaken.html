@@ -508,17 +508,15 @@
         const optionElem = document.createElement("option");
         optionElem.value = names[key];
         optionElem.textContent = names[key];
-        // data-code에 옵션 코드를 문자열로 저장
+        
         optionElem.dataset.code = key.toString();
         targetOptionSelect.appendChild(optionElem);
       }
-      updateTargetValueInput(); // 옵션 갱신 후 목표 수치 입력창 업데이트
+      updateTargetValueInput(); 
     }
 
     /* -------------------------------------------------------
        목표 옵션 변경 시 목표 수치 입력창 활성/비활성 처리
-       (방어구 부위가 신발이 아닐 때, 선택된 옵션의 data-code 길이가 7자리이면
-        입력창은 비활성화하고, 값과 placeholder를 "1 (자동 적용)"으로 설정)
        ------------------------------------------------------- */
     function updateTargetValueInput() {
       const targetValueInput = document.getElementById("targetValue");
@@ -565,14 +563,8 @@
     // 초기 타겟 옵션 업데이트 (기본은 무기)
     updateTargetOptions();
 
-    /* -----------------------------
-       공통: 랜덤 정수 함수
-       ----------------------------- */
     const randInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
 
-    /* -----------------------------
-       시뮬레이션 함수
-       ----------------------------- */
     function simulateAwakening(itemType, armorPart, step, targetOption, targetValue) {
       let sectionProbabilities, costPerAttempt;
       if (step === 4) {
@@ -693,9 +685,6 @@
       }
     }
 
-    /* -----------------------------
-       폼 제출 이벤트 처리
-       ----------------------------- */
     document.getElementById("simulationForm").addEventListener("submit", function(event) {
       event.preventDefault();
       const itemType = document.getElementById("itemType").value;
@@ -715,9 +704,6 @@
       displayResult(result);
     });
 
-    /* -----------------------------
-       결과 출력 함수
-       ----------------------------- */
     function displayResult(result) {
       const container = document.getElementById("resultContainer");
       container.innerHTML = "";
