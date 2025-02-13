@@ -682,23 +682,24 @@
       }
     }
 
-       document.getElementById("simulationForm").addEventListener("submit", function(event) {
-        event.preventDefault();
-        const itemType = document.getElementById("itemType").value;
-        let armorPart = null;
-        if (itemType === "armor") {
-          armorPart = document.getElementById("armorPart").value;
-        }
-        const step = parseInt(document.getElementById("step").value);
-        const targetOption = document.getElementById("targetOption").value;
-        const targetValueInput = document.getElementById("targetValue");
-        let targetValue = targetValueInput.value ? parseInt(targetValueInput.value) : null;
-        if (targetValueInput.disabled) {
-          targetValue = 1;
-        }
-        const result = simulateAwakening(itemType, armorPart, step, targetOption, targetValue);
-        
-        // 에러가 없을 때만 누적값 업데이트
+    document.getElementById("simulationForm").addEventListener("submit", function(event) {
+      event.preventDefault();
+      const itemType = document.getElementById("itemType").value;
+      let armorPart = null;
+      if (itemType === "armor") {
+        armorPart = document.getElementById("armorPart").value;
+      }
+      const step = parseInt(document.getElementById("step").value);
+      const targetOption = document.getElementById("targetOption").value;
+      const targetValueInput = document.getElementById("targetValue");
+      let targetValue = targetValueInput.value ? parseInt(targetValueInput.value) : null;
+      if (targetValueInput.disabled) {
+        targetValue = 1;
+      }
+      const result = simulateAwakening(itemType, armorPart, step, targetOption, targetValue);
+      
+      // 목표 옵션이 "없음"인 경우 누적, 그렇지 않으면 새로 계산(리셋)
+      if (targetOption === "") {
         if (!result.error) {
           if (result.isTargetSim) {
             cumulativeAttempts += result.attempts;
@@ -708,40 +709,54 @@
             cumulativeCost += result.cost;
           }
         }
-        
-        displayResult(result);
-    });
+      } else {
+        // 목표 옵션 선택 시 누적값은 해당 시뮬레이션 결과로 새로 설정
+        if (!result.error) {
+          if (result.isTargetSim) {
+            cumulativeAttempts = result.attempts;
+            cumulativeCost = result.totalCost;
+          } else {
+            cumulativeAttempts = result.attempts;
+            cumulativeCost = result.cost;
+          }
+        }
+      }
+      
+      displayResult(result);
+});
 
-       function displayResult(result) {
-        const container = document.getElementById("resultContainer");
-        container.innerHTML = "";
-        if (result.error) {
-          container.innerHTML = `<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">${result.error}</div>`;
-          return;
-        }
-        let html = `<div class="bg-white p-6 rounded shadow">`;
-        html += `<p class="mb-2"><strong>각성 단계:</strong> ${result.step}</p>`;
-        
-        if (result.isTargetSim) {
-          html += `<p class="mb-2"><strong>목표 옵션:</strong> ${result.targetOption.replace("d", result.targetValue)}</p>`;
-        }
-        
+    function displayResult(result) {
+      const container = document.getElementById("resultContainer");
+      container.innerHTML = "";
+      if (result.error) {
+        container.innerHTML = `<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">${result.error}</div>`;
+        return;
+      }
+      let html = `<div class="bg-white p-6 rounded shadow">`;
+      html += `<p class="mb-2"><strong>각성 단계:</strong> ${result.step}</p>`;
+      
+      if (result.isTargetSim) {
+        html += `<p class="mb-2"><strong>목표 옵션:</strong> ${result.targetOption.replace("d", result.targetValue)}</p>`;
+        html += `<p class="mb-2"><strong>시도 횟수:</strong> ${cumulativeAttempts}회</p>`;
+        html += `<p class="mb-2"><strong>총 소모 비용:</strong> ${cumulativeCost.toLocaleString()} Ely</p>`;
+      } else {
         html += `<p class="mb-2"><strong>누적 시도 횟수:</strong> ${cumulativeAttempts}회</p>`;
         html += `<p class="mb-2"><strong>누적 소모 비용:</strong> ${cumulativeCost.toLocaleString()} Ely</p>`;
-        
-        if (result.appliedOptions.length > 0) {
-          html += `<hr class="my-4">`;
-          html += `<p class="mb-2 font-bold">부여된 옵션:</p><ul class="list-disc pl-5">`;
-          result.appliedOptions.forEach(opt => {
-            html += `<li>${opt}</li>`;
-          });
-          html += `</ul>`;
-        } else {
-          html += `<p class="text-red-600 font-bold">각성에 실패하여 옵션이 부여되지 않았습니다.</p>`;
-        }
-        html += `</div>`;
-        container.innerHTML = html;
       }
+      
+      if (result.appliedOptions.length > 0) {
+        html += `<hr class="my-4">`;
+        html += `<p class="mb-2 font-bold">부여된 옵션:</p><ul class="list-disc pl-5">`;
+        result.appliedOptions.forEach(opt => {
+          html += `<li>${opt}</li>`;
+        });
+        html += `</ul>`;
+      } else {
+        html += `<p class="text-red-600 font-bold">각성에 실패하여 옵션이 부여되지 않았습니다.</p>`;
+      }
+      html += `</div>`;
+      container.innerHTML = html;
+    }
 
        document.getElementById("resetBtn").addEventListener("click", function() {
         document.getElementById("simulationForm").reset();
