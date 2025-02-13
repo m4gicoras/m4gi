@@ -725,6 +725,19 @@
       displayResult(result);
 });
 
+function formatCost(value) {
+  if (value >= 1_000_000_000_000) {
+    // 조 단위: 소수점 한 자리까지 표시 (예: 1.5조)
+    return `${(value / 1_000_000_000_000).toFixed(1)}조 (${value.toLocaleString()} Ely)`;
+  } else if (value >= 100_000_000) {
+    // 억 단위: 1억 단위는 정수로 표시 (예: 100억)
+    return `${(value / 100_000_000).toFixed(0)}억 (${value.toLocaleString()} Ely)`;
+  } else {
+    return `${value.toLocaleString()} Ely`;
+  }
+}
+
+
     function displayResult(result) {
       const container = document.getElementById("resultContainer");
       container.innerHTML = "";
@@ -738,10 +751,10 @@
       if (result.isTargetSim) {
         html += `<p class="mb-2"><strong>목표 옵션:</strong> ${result.targetOption.replace("d", result.targetValue)}</p>`;
         html += `<p class="mb-2"><strong>시도 횟수:</strong> ${cumulativeAttempts}회</p>`;
-        html += `<p class="mb-2"><strong>총 소모 비용:</strong> ${cumulativeCost.toLocaleString()} Ely</p>`;
+        html += `<p class="mb-2"><strong>총 소모 비용:</strong> ${formatCost(cumulativeCost)}</p>`;
       } else {
         html += `<p class="mb-2"><strong>누적 시도 횟수:</strong> ${cumulativeAttempts}회</p>`;
-        html += `<p class="mb-2"><strong>누적 소모 비용:</strong> ${cumulativeCost.toLocaleString()} Ely</p>`;
+        html += `<p class="mb-2"><strong>누적 소모 비용:</strong> ${formatCost(cumulativeCost)}</p>`;
       }
       
       if (result.appliedOptions.length > 0) {
