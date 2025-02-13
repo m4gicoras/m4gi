@@ -666,8 +666,8 @@
               break;
             }
           }
-          if (attempts > 10000) {
-            return { error: "10,000번 시도해도 목표 옵션을 찾지 못했습니다. 다시 시도해주세요." };
+          if (attempts > 20000) {
+            return { error: "20,000번 시도해도 목표 옵션을 찾지 못했습니다. 다시 시도해주세요." };
           }
         }
         return {
