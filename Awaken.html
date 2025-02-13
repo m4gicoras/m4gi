@@ -52,15 +52,19 @@
         <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
           시뮬레이션 시작
         </button>
+        <button type="reset" id="resetBtn" class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded ml-2">
+          리셋
+        </button>
       </div>
     </form>
     <div id="resultContainer" class="mt-6"></div>
   </div>
 
   <script>
-    /* -------------------------------
-       옵션 리스트 및 옵션명 정의
-       ------------------------------- */
+
+    let cumulativeAttempts = 0;
+    let cumulativeCost = 0;
+
     // 무기/정령석 옵션
     const OPTION_LIST_WEAPON = [
       [465, [1, 1]],
@@ -381,7 +385,7 @@
       1211005: "천파협란 Lv. 1",
       1210007: "파워스파이크 Lv. 1",
       1210021: "소울 블레이드 Lv. 1",
-      1107014: "래퍼드해쉬 Lv. 1",
+      1107014: "래퍼드해쉽 Lv. 1",
       1211104: "파워 밤 Lv. 1",
       1104001: "호열각 Lv. 1",
       2211103: "화염지옥 Lv. 1",
@@ -481,10 +485,6 @@
       3818104: "검성【코어 II】 Lv. +d"
     };
 
-    /* -------------------------------------------------------
-       타겟 옵션 셀렉트 업데이트 함수
-       각 option에 data-code 속성에 옵션 코드를 문자열로 저장
-       ------------------------------------------------------- */
     function updateTargetOptions() {
       const targetOptionSelect = document.getElementById("targetOption");
       targetOptionSelect.innerHTML = `<option value="">없음</option>`;
@@ -508,16 +508,13 @@
         const optionElem = document.createElement("option");
         optionElem.value = names[key];
         optionElem.textContent = names[key];
-        
+        // data-code에 옵션 코드를 문자열로 저장
         optionElem.dataset.code = key.toString();
         targetOptionSelect.appendChild(optionElem);
       }
-      updateTargetValueInput(); 
+      updateTargetValueInput(); // 옵션 갱신 후 목표 수치 입력창 업데이트
     }
 
-    /* -------------------------------------------------------
-       목표 옵션 변경 시 목표 수치 입력창 활성/비활성 처리
-       ------------------------------------------------------- */
     function updateTargetValueInput() {
       const targetValueInput = document.getElementById("targetValue");
       const itemType = document.getElementById("itemType").value;
@@ -537,8 +534,8 @@
       const selectedOption = targetOptionSelect.options[targetOptionSelect.selectedIndex];
       if (selectedOption && selectedOption.dataset.code && selectedOption.dataset.code.length === 7) {
         targetValueInput.disabled = true;
-        targetValueInput.value = "";
-        targetValueInput.placeholder = "";
+        targetValueInput.value = "1 (자동 적용)";
+        targetValueInput.placeholder = "1 (자동 적용)";
       } else {
         targetValueInput.disabled = false;
         targetValueInput.placeholder = "예: 50";
@@ -560,7 +557,6 @@
     document.getElementById("armorPart").addEventListener("change", updateTargetOptions);
     document.getElementById("targetOption").addEventListener("change", updateTargetValueInput);
 
-    // 초기 타겟 옵션 업데이트 (기본은 무기)
     updateTargetOptions();
 
     const randInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
@@ -598,7 +594,7 @@
         optionNames = Object.assign({}, OPTION_NAME_ARMOR, additionalOptionNames);
       }
 
-      // 목표 옵션이 없는 경우 (일반 각성)
+      // 목표 옵션이 "없음"인 경우 (targetOption 값이 비어있을 때)
       if (!targetOption || !targetValue) {
         const appliedOptions = [];
         const skillOption = new Set();
@@ -622,6 +618,7 @@
         return {
           step,
           cost: costPerAttempt,
+          attempts: 1,
           appliedOptions,
           isTargetSim: false
         };
@@ -685,54 +682,74 @@
       }
     }
 
-    document.getElementById("simulationForm").addEventListener("submit", function(event) {
-      event.preventDefault();
-      const itemType = document.getElementById("itemType").value;
-      let armorPart = null;
-      if (itemType === "armor") {
-        armorPart = document.getElementById("armorPart").value;
-      }
-      const step = parseInt(document.getElementById("step").value);
-      const targetOption = document.getElementById("targetOption").value;
-      const targetValueInput = document.getElementById("targetValue");
-      let targetValue = targetValueInput.value ? parseInt(targetValueInput.value) : null;
-      // 만약 입력창이 비활성화되어 있다면 targetValue는 1로 처리
-      if (targetValueInput.disabled) {
-        targetValue = 1;
-      }
-      const result = simulateAwakening(itemType, armorPart, step, targetOption, targetValue);
-      displayResult(result);
+       document.getElementById("simulationForm").addEventListener("submit", function(event) {
+        event.preventDefault();
+        const itemType = document.getElementById("itemType").value;
+        let armorPart = null;
+        if (itemType === "armor") {
+          armorPart = document.getElementById("armorPart").value;
+        }
+        const step = parseInt(document.getElementById("step").value);
+        const targetOption = document.getElementById("targetOption").value;
+        const targetValueInput = document.getElementById("targetValue");
+        let targetValue = targetValueInput.value ? parseInt(targetValueInput.value) : null;
+        if (targetValueInput.disabled) {
+          targetValue = 1;
+        }
+        const result = simulateAwakening(itemType, armorPart, step, targetOption, targetValue);
+        
+        // 에러가 없을 때만 누적값 업데이트
+        if (!result.error) {
+          if (result.isTargetSim) {
+            cumulativeAttempts += result.attempts;
+            cumulativeCost += result.totalCost;
+          } else {
+            cumulativeAttempts += result.attempts;
+            cumulativeCost += result.cost;
+          }
+        }
+        
+        displayResult(result);
     });
 
-    function displayResult(result) {
-      const container = document.getElementById("resultContainer");
-      container.innerHTML = "";
-      if (result.error) {
-        container.innerHTML = `<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">${result.error}</div>`;
-        return;
+       function displayResult(result) {
+        const container = document.getElementById("resultContainer");
+        container.innerHTML = "";
+        if (result.error) {
+          container.innerHTML = `<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">${result.error}</div>`;
+          return;
+        }
+        let html = `<div class="bg-white p-6 rounded shadow">`;
+        html += `<p class="mb-2"><strong>각성 단계:</strong> ${result.step}</p>`;
+        
+        if (result.isTargetSim) {
+          html += `<p class="mb-2"><strong>목표 옵션:</strong> ${result.targetOption.replace("d", result.targetValue)}</p>`;
+        }
+        
+        html += `<p class="mb-2"><strong>누적 시도 횟수:</strong> ${cumulativeAttempts}회</p>`;
+        html += `<p class="mb-2"><strong>누적 소모 비용:</strong> ${cumulativeCost.toLocaleString()} Ely</p>`;
+        
+        if (result.appliedOptions.length > 0) {
+          html += `<hr class="my-4">`;
+          html += `<p class="mb-2 font-bold">부여된 옵션:</p><ul class="list-disc pl-5">`;
+          result.appliedOptions.forEach(opt => {
+            html += `<li>${opt}</li>`;
+          });
+          html += `</ul>`;
+        } else {
+          html += `<p class="text-red-600 font-bold">각성에 실패하여 옵션이 부여되지 않았습니다.</p>`;
+        }
+        html += `</div>`;
+        container.innerHTML = html;
       }
-      let html = `<div class="bg-white p-6 rounded shadow">`;
-      html += `<p class="mb-2"><strong>각성 단계:</strong> ${result.step}</p>`;
-      if (result.isTargetSim) {
-        html += `<p class="mb-2"><strong>목표 옵션:</strong> ${result.targetOption.replace("d", result.targetValue)}</p>`;
-        html += `<p class="mb-2"><strong>진행 횟수:</strong> ${result.attempts}회</p>`;
-        html += `<p class="mb-2"><strong>총 소모 비용:</strong> ${result.totalCost.toLocaleString()} Ely</p>`;
-      } else {
-        html += `<p class="mb-2"><strong>소모 비용:</strong> ${result.cost.toLocaleString()} Ely</p>`;
-      }
-      html += `<hr class="my-4">`;
-      if (result.appliedOptions.length > 0) {
-        html += `<p class="mb-2 font-bold">부여된 옵션:</p><ul class="list-disc pl-5">`;
-        result.appliedOptions.forEach(opt => {
-          html += `<li>${opt}</li>`;
-        });
-        html += `</ul>`;
-      } else {
-        html += `<p class="text-red-600 font-bold">각성에 실패하여 옵션이 부여되지 않았습니다.</p>`;
-      }
-      html += `</div>`;
-      container.innerHTML = html;
-    }
+
+       document.getElementById("resetBtn").addEventListener("click", function() {
+        document.getElementById("simulationForm").reset();
+        updateTargetOptions();
+        document.getElementById("resultContainer").innerHTML = "";
+        cumulativeAttempts = 0;
+        cumulativeCost = 0;
+});
   </script>
 </body>
 </html>
