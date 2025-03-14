@@ -903,6 +903,7 @@ if (itemType === "weapon" && document.getElementById("conversionMode").checked) 
       const itemType = document.getElementById("itemType");
       itemType.dispatchEvent(new Event("change"));
     });
+    document.getElementById("armorPart").addEventListener("change", updateTargetOptions);
   </script>
 </body>
 </html>
